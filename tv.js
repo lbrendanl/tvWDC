@@ -1,51 +1,96 @@
 (function() {
     // Create the connector object
     var myConnector = tableau.makeConnector();
+    var num_pages = 10;
+
+    var api_key = "8922bff85ef645a09730d7c1836c3edf",
+        base_uri = "http://api.themoviedb.org/3/",
+        images_uri =  "http://image.tmdb.org/t/p/";
 
     // Define the schema
     myConnector.getSchema = function(schemaCallback) {
-        $.getJSON( "./schema.json" )
-        .done(function( schemaJson ) {
-            schemaCallback(schemaJson);
-        })
-        .fail(function( jqxhr, textStatus, error ) {
-            var err = textStatus + ", " + error;
-            console.log( "Request Failed: " + err );
-        });
+        var cols = [
+            { id: "poster_path", dataType: tableau.dataTypeEnum.string },
+            { id: "popularity", dataType: tableau.dataTypeEnum.float },
+            { id: "id", dataType: tableau.dataTypeEnum.int },
+            { id: "backdrop_path", dataType: tableau.dataTypeEnum.string },
+            { id: "vote_average", dataType: tableau.dataTypeEnum.float },
+            { id: "overview", dataType: tableau.dataTypeEnum.string },
+            { id: "first_air_date", dataType: tableau.dataTypeEnum.date },
+            { id: "origin_country", dataType: tableau.dataTypeEnum.string },
+            { id: "original_language", dataType: tableau.dataTypeEnum.string },
+            { id: "vote_count", dataType: tableau.dataTypeEnum.int },
+            { id: "name", dataType: tableau.dataTypeEnum.string },
+            { id: "original_name", dataType: tableau.dataTypeEnum.string }
+        ];
+
+        var tableSchema = {
+            id: "shows",
+            alias: "Top Rated TV Shows",
+            columns: cols
+        };
+
+        schemaCallback([tableSchema]);
     };
 
     // Download the data
     myConnector.getData = function(table, doneCallback) {
-        theMovieDb.tv.getTopRated({}, function(data) {
-            console.log("Success callback: " + data); 
-            var toRet = [];
-            var jsonData = $.parseJSON(data); 
-            _.each(jsonData.results, function(record) {               
-                entry = {
-                    "poster_path": record.poster_path,
-                    "popularity": record.popularity,
-                    "id": record.id,
-                    "backdrop_path": record.backdrop_path,
-                    "vote_average": record.vote_average,
-                    "overview": record.overview,
-                    "first_air_date": record.first_air_date,
-                    "origin_country": record.origin_country,
-                    "genre_id1": record.genre_ids[0],
-                    "genre_id2": record.genre_ids[1],
-                    "original_language": record.original_language,
-                    "vote_count": record.vote_count,
-                    "name": record.name,
-                    "original_name": record.original_name
-                };
+        var i;
+        var promises = [];
 
-                toRet.push(entry)
+        for (i = 1; i < num_pages; i++) {
+            promises.push(getResultsPromise(table, i));    
+        }
+
+        var promise = Promise.all(promises);
+
+        promise.then(function(response) {
+            doneCallback();
+        }, function(error) {
+            tableau.abortWithError(error);
+        });
+    };
+
+    function getResultsPromise(table, pageNum) {
+        return new Promise(function(resolve, reject) {
+            var connectionUrl = base_uri + "tv/popular?api_key=" + api_key + "&page=" + pageNum;
+            
+            var xhr = $.ajax({
+                url: connectionUrl,
+                dataType: 'json',
+                success: function(data) {
+                    var toRet = [];
+                    
+                    if (data.results) {
+                        _.each(data.results, function(record) {               
+                            entry = {
+                                "poster_path": record.poster_path,
+                                "popularity": record.popularity,
+                                "id": record.id,
+                                "backdrop_path": record.backdrop_path,
+                                "vote_average": record.vote_average,
+                                "overview": record.overview,
+                                "first_air_date": record.first_air_date,
+                                "origin_country": record.origin_country[0] || null,
+                                "original_language": record.original_language,
+                                "vote_count": record.vote_count,
+                                "name": record.name,
+                                "original_name": record.original_name
+                            };
+
+                            toRet.push(entry)
+                        });
+
+                        table.appendRows(toRet);
+                        resolve();
+                    } else {
+                        Promise.reject("No results found for ticker symbol: " + ticker);
+                    }
+                 },
+                 error: function(xhr, ajaxOptions, thrownError) {
+                     Promise.reject("error connecting to the yahoo stock data source: " + thrownError);
+                 }
             });
-
-            table.appendRows(toRet);
-            doneCallback();  
-
-        }, function(data) {
-            console.log("Error callback: " + data);
         });
     };
 
