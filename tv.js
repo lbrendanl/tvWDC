@@ -5,7 +5,7 @@
 
     var api_key = "8922bff85ef645a09730d7c1836c3edf",
         base_uri = "http://api.themoviedb.org/3/",
-        images_uri =  "http://image.tmdb.org/t/p/";
+        images_uri =  "http://image.tmdb.org/t/p/w500";
 
     // Define the schema
     myConnector.getSchema = function(schemaCallback) {
@@ -64,10 +64,10 @@
                     if (data.results) {
                         _.each(data.results, function(record) {               
                             entry = {
-                                "poster_path": record.poster_path,
+                                "poster_path": images_uri + record.poster_path,
                                 "popularity": record.popularity,
                                 "id": record.id,
-                                "backdrop_path": record.backdrop_path,
+                                "backdrop_path": images_uri + record.backdrop_path,
                                 "vote_average": record.vote_average,
                                 "overview": record.overview,
                                 "first_air_date": record.first_air_date,
