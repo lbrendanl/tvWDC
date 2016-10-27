@@ -1,2 +1,13 @@
-var api_key = "8922bff85ef645a09730d7c1836c3edf",
-"http://api.themoviedb.org/3/tv/popular?api_key=" + api_key;
+var toRet = [];
+var i;
+var record;
+
+for (i = 0; i < data.results.length; i++) {
+    record = data.results[i];
+    entry = {
+        "popularity": record.popularity,
+        "name": record.name
+    };
+
+    toRet.push(entry)
+};
