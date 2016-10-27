@@ -12,5 +12,6 @@
 
     };
 
+    // Tell Tableau about our connector
     tableau.registerConnector(myConnector);
 })();
